@@ -1,0 +1,464 @@
+{
+  "name": "Lead Response Auto-Pilot v3 (AI + CRM)",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Get in Touch",
+        "formDescription": "Leave your details and we'll get back to you fast.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full Name",
+              "placeholder": "Jane Doe",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "placeholder": "jane@email.com",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Phone Number",
+              "placeholder": "Optional"
+            },
+            {
+              "fieldLabel": "How can we help you?",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {
+          "buttonLabel": "Send",
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "Thanks! We've got your message and will reply shortly."
+            }
+          }
+        }
+      },
+      "id": "a3f3c268-b862-4354-9aa8-9d3c89291b0f",
+      "name": "New Lead Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        112
+      ],
+      "webhookId": "945b3846-7fbd-4c7e-90e9-c1d8d0e49979"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=A new lead just submitted our website contact form. Analyze it and draft a reply.\n\nName: {{ $json['Full Name'] }}\nEmail: {{ $json['Email'] }}\nPhone: {{ $json['Phone Number'] }}\nMessage: {{ $json['How can we help you?'] }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a lead qualification and response assistant for a service business. For each incoming lead you must:\n1. Score the lead as 'Hot', 'Warm', or 'Cold' based on buying intent, urgency, and specificity. Hot = ready to buy or asking about price/starting; Warm = interested but exploring; Cold = vague, spammy, or just browsing.\n2. Give a short category for the enquiry (e.g. 'Pricing enquiry', 'Support', 'Partnership', 'Spam').\n3. Write a one-line summary the owner can read in 2 seconds to know who to call first.\n4. Write a warm, professional, genuinely personalized reply that references what they actually asked about. Keep it under 120 words, sign off as 'The Team', and never invent specific prices or promises.\nReturn only the structured fields."
+        }
+      },
+      "id": "394e9a5b-1661-4fd6-9d34-6b99c1401239",
+      "name": "Analyze & Draft Reply",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "28e01d1f-c0e9-4f0f-9189-82b565e375ea",
+      "name": "Claude",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        240,
+        336
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "CBLXyWZZwNnsaFMp",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"lead_score\":\"Hot\",\"category\":\"Pricing enquiry\",\"summary\":\"One-line summary of what the lead wants and how ready they are to buy.\",\"personalized_reply\":\"The full personalized reply email body to send to the lead.\"}"
+      },
+      "id": "219aee49-b968-43dd-be9c-75278eeafd25",
+      "name": "Lead Analysis Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        368,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1n6pdKGlOPh-5_KOYC2coBOe_IjuKawI0qgAw4rjTSKU",
+          "cachedResultName": "Leads CRM"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1054194824,
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1n6pdKGlOPh-5_KOYC2coBOe_IjuKawI0qgAw4rjTSKU/edit#gid=1054194824"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "value": {
+            "Timestamp": "={{ $now.toFormat('yyyy-MM-dd HH:mm') }}",
+            "Name": "={{ $('New Lead Form').item.json['Full Name'] }}",
+            "Email": "={{ $('New Lead Form').item.json['Email'] }}",
+            "Phone": "={{ $('New Lead Form').item.json['Phone Number'] }}",
+            "Message": "={{ $('New Lead Form').item.json['How can we help you?'] }}",
+            "Score": "={{ $('Analyze & Draft Reply').item.json.output.lead_score }}",
+            "Category": "={{ $('Analyze & Draft Reply').item.json.output.category }}",
+            "Summary": "={{ $('Analyze & Draft Reply').item.json.output.summary }}",
+            "Reply Sent": "={{ $('Analyze & Draft Reply').item.json.output.personalized_reply }}",
+            "Status": "New"
+          },
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reply Sent",
+              "displayName": "Reply Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bac69f9d-8af0-46f3-8708-e52f8c7de1b1",
+      "name": "Log to CRM Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        576,
+        112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "PxwQPcfwB7FKU40f",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Analyze & Draft Reply').item.json.output.lead_score }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "Hot"
+            },
+            {
+              "leftValue": "={{ $('Analyze & Draft Reply').item.json.output.lead_score }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "Warm"
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "3398550b-3be4-45c5-8233-70deaf3573fb",
+      "name": "Hot or Warm?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('New Lead Form').item.json['Email'] }}",
+        "subject": "=Thanks for reaching out, {{ $('New Lead Form').item.json['Full Name'] }}!",
+        "emailType": "text",
+        "message": "={{ $('Analyze & Draft Reply').item.json.output.personalized_reply }}",
+        "options": {}
+      },
+      "id": "cb90f9ef-d1b8-437d-a10f-c4e8a87bfd29",
+      "name": "Send Personalized Reply",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        112
+      ],
+      "webhookId": "fbc099e2-a3db-40b2-a5ef-e8640291c19c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fM0qwY7O1tLXFykm",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "muabdullahkhan28@gmail.com",
+        "subject": "=[{{ $('Analyze & Draft Reply').item.json.output.lead_score }}] New lead: {{ $('New Lead Form').item.json['Full Name'] }}",
+        "message": "=<h3>{{ $('Analyze & Draft Reply').item.json.output.lead_score }} lead — {{ $('Analyze & Draft Reply').item.json.output.category }}</h3><p><b>Summary:</b> {{ $('Analyze & Draft Reply').item.json.output.summary }}</p><hr><ul><li><b>Name:</b> {{ $('New Lead Form').item.json['Full Name'] }}</li><li><b>Email:</b> {{ $('New Lead Form').item.json['Email'] }}</li><li><b>Phone:</b> {{ $('New Lead Form').item.json['Phone Number'] }}</li><li><b>Their message:</b> {{ $('New Lead Form').item.json['How can we help you?'] }}</li></ul><hr><p>Logged to your CRM sheet. Reply we auto-sent them:</p><blockquote>{{ $('Analyze & Draft Reply').item.json.output.personalized_reply }}</blockquote>",
+        "options": {}
+      },
+      "id": "e8f80e5d-2d3a-4535-8324-82d63c9469e0",
+      "name": "Notify Me with Score",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        112
+      ],
+      "webhookId": "bc0db21c-55d5-4169-abef-95b5214f5d5b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fM0qwY7O1tLXFykm",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "8839282691",
+        "text": "=🔥 HOT LEAD ALERT 🔥\n\n👤 Name: {{ $('New Lead Form').item.json['Full Name'] }}\n📧 Email: {{ $('New Lead Form').item.json['Email'] }}\n📞 Phone: {{ $('New Lead Form').item.json['Phone Number'] }}\n\n🧠 AI Summary:\n{{ $('Analyze & Draft Reply').item.json.output.summary }}\n\n⚡ Call them NOW — they are ready to buy!",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "0514cab7-8a97-4258-9b6f-bb2f987dbd1a",
+      "name": "Phone Alert - Hot Lead",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        320
+      ],
+      "webhookId": "129a0903-540f-4063-9c8f-89b8ff0724ed",
+      "credentials": {
+        "telegramApi": {
+          "id": "fEFvqJoirYSjsQah",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "New Lead Form": {
+      "main": [
+        [
+          {
+            "node": "Analyze & Draft Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze & Draft Reply": {
+      "main": [
+        [
+          {
+            "node": "Log to CRM Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyze & Draft Reply",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Analysis Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Analyze & Draft Reply",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to CRM Sheet": {
+      "main": [
+        [
+          {
+            "node": "Hot or Warm?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hot or Warm?": {
+      "main": [
+        [
+          {
+            "node": "Send Personalized Reply",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Phone Alert - Hot Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Personalized Reply": {
+      "main": [
+        [
+          {
+            "node": "Notify Me with Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "6459c225-09be-48f1-9791-969c1834a9c7",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "665692e14e5a21486a65075cb1962c67888ddb2c31111222b648a741446573b1"
+  },
+  "nodeGroups": [],
+  "id": "F4MzjZun6lP3SOk0",
+  "tags": []
+}
