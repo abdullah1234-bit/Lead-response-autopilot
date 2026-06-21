@@ -74,3 +74,6 @@ New Lead Form → Analyze & Draft Reply (Claude)
 
         Hot or Warm? ──→ Phone Alert - Hot Lead (Telegram)  [parallel branch]
 ```
+## Video that how agent works
+
+https://www.loom.com/share/04eba0c1dddd45d781f1f11ab6007ade
